@@ -147,6 +147,21 @@ local function GetNearestMob()
     return Mob
 end
 
+local function GetAngerbreads()
+    local Nearest = math.huge
+    local Mob = nil
+    for i, v in next, game.Workspace["NPC Zones"]:GetDescendants() do
+        if v:IsA("Model") and v.Parent.Name == "NPCS" and v.Humanoid.Health > 0 and v.NPCName.Value == "Angerbread" then
+            local Mag = (Player.Character.HumanoidRootPart.Position - v.HumanoidRootPart.Position).Magnitude
+            if Mag < Nearest then
+                Nearest = Mag
+                Mob = v
+            end
+        end
+    end
+    return Mob
+end
+
 local function GetFruit()
     local Nearest = math.huge
     local Fruit = nil
@@ -176,12 +191,16 @@ local AStats = Main:NewSection("Auto Stats")
 local ASkills = Main:NewSection("Auto Skills")
 
 local AutoAttack
-local AFToggle1 = AFarm:NewToggle("Auto Attack", "Bruh you need information for this", function(Value)
+local AFToggle1 = AFarm:NewToggle("Auto Attack", "Bruh you need information for this?", function(Value)
     AutoAttack = Value
     while wait() do
         if AutoAttack and (Player.Character or Player.CharacterAdded:Wait()) then
             pcall(function()
-                game:GetService("Players").LocalPlayer.Character.Combat.Punch:FireServer((1))
+                if SelectedWeapon == "Combat" then
+                    Player.Character.Combat.Punch:FireServer((1))
+                else
+                    Player.Character:FindFirstChild(SelectedWeapon):Activate()
+                end
             end)
         end
     end
@@ -327,6 +346,75 @@ local AFToggle2 = AFarm:NewToggle("Auto Farm", "Auto Farm Selected Quest", funct
     end
 end)
 
+local AutoFarmKrampus
+local AFToggle3 = AFarm:NewToggle("Auto Farm Krampus", "Auto spawn and farm krampus", function(Value)
+    AutoFarmKrampus = Value
+    while wait() do
+        if AutoFarmKrampus and (Player.Character or Player.CharacterAdded:Wait()) then
+            pcall(function()
+                if #game.Workspace["NPC Zones"].SpecialBosses.NPCS:GetChildren() == 0 then
+                    if Player.Quest.Objective.Value ~= "SpawnKrampus" then
+                        TweenTP(game.Workspace.Npc_Workspace.KrampusQuest.SpawnKrampus.Clicker)
+                        game:GetService("Players").LocalPlayer.PlayerGui.QuestGui.QuestFunction:InvokeServer(game.Workspace.Npc_Workspace.KrampusQuest.SpawnKrampus.SpawnKrampus)
+                    end
+                    if Player.Quest.PassiveQuestName.Value == "Defeat Angerbreads for 5 gifts" then
+                        local Tool = Player.Backpack:FindFirstChild(SelectedWeapon) or Player.Character:FindFirstChild(SelectedWeapon)
+                        if Tool then
+                            Tool.Parent = Player.Character
+                        end
+                        if Tool == nil then
+                            Player.Humanoid.Health = 0
+                        end
+                        TweenTP(GetAngerbreads().HumanoidRootPart)
+                    end
+                    if Player.Quest.PassiveQuestName.Value == "Deliver Gifts!" then
+                        TweenTP(game.Workspace.Npc_Workspace.KrampusQuest.SpawnKrampus.Clicker)
+                        for i, v in pairs(game.Workspace.Logic.Ignore.QuestNodes.GiftDeliveryPoints:GetDescendants()) do
+                            if v:IsA("ProximityPrompt") then
+                                fireproximityprompt(v)
+                            end
+                        end
+                    end
+                end
+
+                if #game.Workspace["NPC Zones"].SpecialBosses.NPCS:GetChildren() >= 1 then
+                    for i, v in pairs(game.Workspace["NPC Zones"].SpecialBosses.NPCS:GetChildren()) do
+                        if v.Humanoid.Health > 0 and v.NPCName.Value == "Krampus" then
+                            local Tool = Player.Backpack:FindFirstChild(SelectedWeapon) or Player.Character:FindFirstChild(SelectedWeapon)
+                            if Tool then
+                                Tool.Parent = Player.Character
+                            end
+                            if Tool == nil then
+                                Player.Humanoid.Health = 0
+                            end
+                            TweenTP(v.HumanoidRootPart)
+                        end
+                    end
+                end
+
+                --[[for i, v in pairs(game.Workspace["NPC Zones"]:GetDescendants()) do
+                    if not string.find(v.Name, "Krampus") then
+                        if Player.Quest.Objective.Value ~= "SpawnKrampus" then
+                            TweenTP(game.Workspace.Npc_Workspace.KrampusQuest.SpawnKrampus.Clicker)
+                            game:GetService("Players").LocalPlayer.PlayerGui.QuestGui.QuestFunction:InvokeServer(game.Workspace.Npc_Workspace.KrampusQuest.SpawnKrampus.SpawnKrampus)
+                        end
+                        if Player.Quest.PassiveQuestName.Value == "Defeat Angerbreads for 5 gifts" then
+                            TweenTP(GetAngerbreads().HumanoidRootPart)
+                        end
+                        if Player.Quest.PassiveQuestName.Value == "Deliver Gifts!" then
+                            for i, v in pairs(game.Workspace.Logic.Ignore.QuestNodes.GiftDeliveryPoints:GetDescendants()) do
+                                if v:IsA("ProximityPrompt") then
+                                    fireproximityprompt(v)
+                                end
+                            end
+                        end
+                    end
+                end--]]
+            end)
+        end
+    end
+end)
+
 local AFDropdown2 = AFarm:NewDropdown("Select Mob", "Select Mob for Auto Farm", Mobs, function(Option)
     SelectedMob = Option
 end)
@@ -345,7 +433,7 @@ local AFButton2 = AFarm:NewButton("Refresh Weapons", "Refresh Weapons Info", fun
 end)
 
 local AutoFarmChest
-local AFToggle2 = AFarm:NewToggle("Auto Farm Chest", "Auto Farm all Chest", function(Value)
+local AFToggle4 = AFarm:NewToggle("Auto Farm Chest", "Auto Farm all Chest", function(Value)
     AutoFarmChest = Value
     while wait() do
         if AutoFarmChest and (Player.Character or Player.CharacterAdded:Wait()) then
@@ -407,16 +495,23 @@ local AutoSkill
 local ASKToggle1 = ASkills:NewToggle("Auto Skills", "Auto use skills", function(Value)
     AutoSkill = Value
     while wait() do
-        if AutoSkill and AutoFarm and (Player.Character or Player.CharacterAdded:Wait()) then
+        if AutoSkill and (AutoFarm or AutoFarmKrampus) and (Player.Character or Player.CharacterAdded:Wait()) then
             pcall(function()
                 if SelectedWeapon == "Combat" then
-                    if ZSkill and (Player.Character.HumanoidRootPart.Position - GetNearestMob().HumanoidRootPart.Position).Magnitude < 50 then
+                    if ZSkill then
                         local Num = 1
                         local CFrame1 = GetNearestMob().HumanoidRootPart.CFrame
                         Player.Character.Combat.Events.DetriotSmash:FireServer(Num, CFrame1)
                     end
-                    if XSkill and (Player.Character.HumanoidRootPart.Position - GetNearestMob().HumanoidRootPart.Position).Magnitude < 50 then
+                    if XSkill then
                         Player.Character.Combat.Events.GroundSmash:FireServer()
+                    end
+                elseif SelectedWeapon == "Krampus Scythe" then
+                    if ZSkill then
+                        game:GetService("ReplicatedStorage").Replication.ClientEvents.ChillingSpikes:FireServer()
+                    end
+                    if XSkill then
+                        game:GetService("ReplicatedStorage").Replication.ClientEvents.HolidaySpirit:FireServer()
                     end
                 end
             end)
