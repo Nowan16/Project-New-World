@@ -199,6 +199,10 @@ local AFToggle2 = AFarm:NewToggle("Auto Farm", "Auto Farm Selected Quest", funct
                     Tool.Parent = Player.Character
                 end
 
+                if Tool == nil then
+                    Player.Character.Humanoid.Health = 0
+                end
+
                 if Player.Quest.NPCName.Value == "" then
                     if SelectedMob == "Thief" then
                         TweenTP(game.Workspace.Npc_Workspace.QuestGivers["1"].Clicker)
@@ -316,8 +320,8 @@ local AFToggle2 = AFarm:NewToggle("Auto Farm", "Auto Farm Selected Quest", funct
                         local Level = "Level 900"
                         game:GetService("Players").LocalPlayer.PlayerGui.QuestGui.QuestFunction:InvokeServer(NPC, Level)
                     end
-                    TweenTP(GetNearestMob().HumanoidRootPart)
                 end
+                TweenTP(GetNearestMob().HumanoidRootPart)
             end)
         end
     end
