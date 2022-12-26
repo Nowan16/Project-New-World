@@ -591,7 +591,7 @@ local ESPToggle2 = ESP:NewToggle("Fruit ESP", "", function(Value)
             end)
         else
             for i, v in pairs(game.Workspace:GetDescendants()) do
-                if v:IsA("Tool") and (v.Parent == game.Workspace or v.Parent.Parent == game.Workspace.Logic.FruitDrops)
+                if v:IsA("Tool") and (v.Parent == game.Workspace or v.Parent.Parent == game.Workspace.Logic.FruitDrops) then
                     if v.Handle:FindFirstChild("FrootESP") then
                         v.Handle:FindFirstChild("FrootESP"):Destroy()
                     end
