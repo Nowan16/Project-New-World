@@ -501,7 +501,7 @@ local LPsSlider1 = LPs:NewSlider("Jump power", "", 400, 75, function(Value)
 end)
 
 local PlrESP
-local ESPToggle1 = ESP:NewToggle("ESP", "", function(Value)
+local ESPToggle1 = ESP:NewToggle("Player ESP", "", function(Value)
     PlrESP = Value
     game:GetService("RunService").RenderStepped:Connect(function()
         if PlrESP then
@@ -550,6 +550,50 @@ local ESPToggle1 = ESP:NewToggle("ESP", "", function(Value)
                 if v.Character and v.Name ~= Player.Name then
                     if v.Character.Head:FindFirstChild("PlayerESP") then
                         v.Character.Head:FindFirstChild("PlayerESP"):Destroy()
+                    end
+                end
+            end
+        end
+    end)
+end)
+
+local FruitESP
+local ESPToggle2 = ESP:NewToggle("Fruit ESP", "", function(Value)
+    FruitESP = Value
+    game:GetService("RunService").RenderStepped:Connect(function()
+        if FruitESP then
+            pcall(function()
+                for i, v in pairs(game.Workspace:GetChildren()) do
+                    if v:IsA("Tool") then
+                        if not v.Handle:FindFirstChild("FrootESP") then
+                            local BGui = Instance.new("BillboardGui", v.Handle)
+                            BGui.Name = "FrootESP"
+                            BGui.Size = UDim2.new(0, 175, 0, 30)
+                            BGui.Adornee = v.Handle
+                            BGui.AlwaysOnTop = true
+
+                            local Nama = Instance.new("TextLabel", BGui)
+                            Nama.Name = "Nama"
+                            Nama.Text = (v.Name .. " (" .. Round((game.Players.LocalPlayer.Character.Head.Position - v.Handle.Position).Magnitude/3) .. "m)")
+                            Nama.TextScaled = true
+                            Nama.Size = UDim2.new(1, 0, 0.33, 0)
+                            Nama.Position = UDim2.new(0, 0, 0, 0)
+                            Nama.TextYAlignment = "Top"
+                            Nama.TextColor3 = Color3.fromRGB(255, 180, 0)
+                            Nama.BackgroundTransparency = 1
+                            Nama.Font = Enum.Font.GothamBold
+                            Nama.TextStrokeTransparency = 0.5
+                        else
+                            v.Handle.FrootESP.Nama.Text = (v.Name .. " (" .. Round((game.Players.LocalPlayer.Character.Head.Position - v.Handle.Position).Magnitude/3) .. "m)")
+                        end
+                    end
+                end
+            end)
+        else
+            for i, v in pairs(game.Workspace:GetChildren()) do
+                if v:IsA("Tool") then
+                    if v.Handle:FindFirstChild("FrootESP") then
+                        v.Handle:FindFirstChild("FrootESP"):Destroy()
                     end
                 end
             end
