@@ -582,7 +582,28 @@ local MButton1 = MSec:NewButton("Hop to Low Player Server", "", function()
     })
 end)
 
-local MButton2 = MSec:NewButton("Copy Discord Link", "", function()
+local MButton2 = MSec:NewButton("Hop to High Player Server", "", function()
+    local rejoinPreferred = loadstring(game:HttpGetAsync("https://raw.githubusercontent.com/Kozenomenon/RBX_Pub/main/Misc/Rejoin_Preferred_Server.lua"))
+    rejoinPreferred({
+        SizeSort = "desc",
+        MinPlayers = 1,
+        MaxPlayers = 0,
+        ExcludeFull = true,
+        ExcludeSame = true,
+        MinFps = 30,
+        MaxPing = 190,
+        
+        FpsSortWeight = 1,
+        PingSortWeight = 1,
+        SizeSortWeight = 5, 
+        
+        PrintVerbose = false,
+        PrintPrefixTime = false,
+        PrintUseConsoleWindow = false
+    })
+end)
+
+local MButton3 = MSec:NewButton("Copy Discord Link", "", function()
     setclipboard("https://discord.gg/pdsSGSsUj2")
 end)
 
