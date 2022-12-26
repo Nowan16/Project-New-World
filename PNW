@@ -193,7 +193,6 @@ local AFToggle2 = AFarm:NewToggle("Auto Farm", "Auto Farm Selected Quest", funct
     while wait() do
         if AutoFarm and (Player.Character or Player.CharacterAdded:Wait()) then
             pcall(function()
-                TweenTP(GetNearestMob().HumanoidRootPart)
                 local Tool = Player.Backpack:FindFirstChild(SelectedWeapon) or Player.Character:FindFirstChild(SelectedWeapon)
 
                 if Tool then
@@ -317,6 +316,7 @@ local AFToggle2 = AFarm:NewToggle("Auto Farm", "Auto Farm Selected Quest", funct
                         local Level = "Level 900"
                         game:GetService("Players").LocalPlayer.PlayerGui.QuestGui.QuestFunction:InvokeServer(NPC, Level)
                     end
+                    TweenTP(GetNearestMob().HumanoidRootPart)
                 end
             end)
         end
@@ -564,7 +564,7 @@ local ESPToggle2 = ESP:NewToggle("Fruit ESP", "", function(Value)
         if FruitESP then
             pcall(function()
                 for i, v in pairs(game.Workspace:GetChildren()) do
-                    if v:IsA("Tool") then
+                    if v:IsA("Tool") and (v.Parent == game.Workspace or v.Parent.Parent == game.Workspace.Logic.FruitDrops) then
                         if not v.Handle:FindFirstChild("FrootESP") then
                             local BGui = Instance.new("BillboardGui", v.Handle)
                             BGui.Name = "FrootESP"
@@ -590,8 +590,8 @@ local ESPToggle2 = ESP:NewToggle("Fruit ESP", "", function(Value)
                 end
             end)
         else
-            for i, v in pairs(game.Workspace:GetChildren()) do
-                if v:IsA("Tool") then
+            for i, v in pairs(game.Workspace:GetDescendants()) do
+                if v:IsA("Tool") and (v.Parent == game.Workspace or v.Parent.Parent == game.Workspace.Logic.FruitDrops)
                     if v.Handle:FindFirstChild("FrootESP") then
                         v.Handle:FindFirstChild("FrootESP"):Destroy()
                     end
