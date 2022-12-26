@@ -150,8 +150,8 @@ end
 local function GetFruit()
     local Nearest = math.huge
     local Fruit = nil
-    for i, v in next, game.Workspace:GetChildren() do
-        if v:IsA("Tool") then
+    for i, v in pairs(game.Workspace:GetDescendants()) do
+        if v:IsA("Tool") and (v.Parent == game.Workspace or v.Parent.Parent == game.Workspace.Logic.FruitDrops) then
             local Mag = (Player.Character.HumanoidRootPart.Position - v.Handle.Position).Magnitude
             if Mag < Nearest then
                 Nearest = Mag
@@ -453,7 +453,7 @@ local TPToggle1 = TPs:NewToggle("Teleport to Spawned Fruit", "...", function(Val
     end
 end)
 
-local SelectedIsland
+local SelectedIsland = "Starter Island"
 local TPDropdown1 = TPs:NewDropdown("Select Island", "", Islands, function(Option)
     SelectedIsland = Option
 end)
