@@ -196,6 +196,9 @@ local AFToggle1 = AFarm:NewToggle("Auto Attack", "Bruh you need information for 
     while wait() do
         if AutoAttack and (Player.Character or Player.CharacterAdded:Wait()) then
             pcall(function()
+                if Player.Character.BusoEnabled.Value == false then
+                    Player.Character.Buso_Server.Comunication:FireServer()
+                end
                 if SelectedWeapon == "Combat" then
                     Player.Character.Combat.Punch:FireServer((1))
                 else
@@ -497,21 +500,32 @@ local ASKToggle1 = ASkills:NewToggle("Auto Skills", "Auto use skills", function(
     while wait() do
         if AutoSkill and (AutoFarm or AutoFarmKrampus) and (Player.Character or Player.CharacterAdded:Wait()) then
             pcall(function()
-                if SelectedWeapon == "Combat" then
+                if syn or KRNL_LOADED then
                     if ZSkill then
-                        local Num = 1
-                        local CFrame1 = GetNearestMob().HumanoidRootPart.CFrame
-                        Player.Character.Combat.Events.DetriotSmash:FireServer(Num, CFrame1)
+                        keypress(0x5A)
+                        keyrelease(0x5A)
                     end
                     if XSkill then
-                        Player.Character.Combat.Events.GroundSmash:FireServer()
+                        keypress(0x58)
+                        keyrelease(0X58)
                     end
-                elseif SelectedWeapon == "Krampus Scythe" then
-                    if ZSkill then
-                        game:GetService("ReplicatedStorage").Replication.ClientEvents.ChillingSpikes:FireServer()
-                    end
-                    if XSkill then
-                        game:GetService("ReplicatedStorage").Replication.ClientEvents.HolidaySpirit:FireServer()
+                else
+                    if SelectedWeapon == "Combat" then
+                        if ZSkill then
+                            local Num = 1
+                            local CFrame1 = GetNearestMob().HumanoidRootPart.CFrame
+                            Player.Character.Combat.Events.DetriotSmash:FireServer(Num, CFrame1)
+                        end
+                        if XSkill then
+                            Player.Character.Combat.Events.GroundSmash:FireServer()
+                        end
+                    elseif SelectedWeapon == "Krampus Scythe" then
+                        if ZSkill then
+                            game:GetService("ReplicatedStorage").Replication.ClientEvents.ChillingSpikes:FireServer()
+                        end
+                        if XSkill then
+                            game:GetService("ReplicatedStorage").Replication.ClientEvents.HolidaySpirit:FireServer()
+                        end
                     end
                 end
             end)
