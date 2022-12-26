@@ -1,0 +1,606 @@
+repeat wait() until game:IsLoaded()
+
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/xHeptc/Kavo-UI-Library/main/source.lua"))()
+local Window = Library.CreateLib("Project New World", "Ocean")
+
+-- Variables -- 
+
+local Player = game.Players.LocalPlayer
+local TweenService = game:GetService("TweenService")
+
+local NoclipE = false
+local AntiFall = false
+
+local SelectedLevel = "Level 1"
+local SelectedQuest = "1"
+local SelectedMob = "Thief"
+local SelectedWeapon = "Combat"
+
+local ZSkill = false
+local XSkill = false
+
+local PlrJump = 60
+local TweenSpeed = 500
+
+for i, v in pairs(getconnections(game.Players.LocalPlayer.Idled)) do
+    v:Disable()
+end
+
+-- Some Functions --
+
+local QuestGivers = {}
+for i, v in pairs(game.Workspace.Npc_Workspace.QuestGivers:GetChildren()) do
+    if not table.find(QuestGivers, v.Name) then
+        table.insert(QuestGivers, v.Name)
+    end
+end
+
+local Islands = {}
+for i, v in pairs(game.Workspace.Npc_Workspace["Spawn Setters"]:GetChildren()) do
+    if v:IsA("Model") then
+        if not table.find(Islands, v.Name) then
+            table.insert(Islands, v.Name)
+        end
+    end
+end
+
+local Weapons = {}
+local function GetWeapons()
+    table.clear(Weapons)
+    for i, v in pairs(Player.Backpack:GetChildren()) do
+        if v:IsA("Tool") then
+            if not table.find(Weapons, v.Name) then
+                table.insert(Weapons, v.Name)
+            end
+        end
+    end
+    return Weapons
+end
+GetWeapons()
+
+local function Round(num)
+    return math.floor(tonumber(num) + 0.5)
+end
+
+local function GetQuestsLevel(NPC)
+    local Quests = {}
+    if NPC:FindFirstChild(NPC.Name) then
+        for i, v in pairs(NPC[NPC.Name].Configuration.Quests:GetChildren()) do
+            if not table.find(Quests, v.Name) then
+                table.insert(Quests, v.Name)
+            end
+        end
+    end
+    return Quests
+end
+
+local function GetNPCName()
+    return Player.Quest.NPCName.Value
+end
+
+local function Noclip()
+    for i, v in pairs(Player.Character:GetDescendants()) do
+        if v:IsA("BasePart") and v.CanCollide == true then
+            v.CanCollide = false
+        end
+    end
+end
+
+local function TweenTP(Part)
+    local Info = TweenInfo.new((Player.Character.HumanoidRootPart.Position - Part.Position).Magnitude / TweenSpeed, Enum.EasingStyle.Linear)
+    local Teleport = {CFrame = Part.CFrame * CFrame.new(0, 0, 3)}
+    local Tween = TweenService:Create(Player.Character.HumanoidRootPart, Info, Teleport)
+
+    if not game.Players.LocalPlayer.Character.HumanoidRootPart:FindFirstChild("BodyVelocity") then
+        AntiFall = Instance.new("BodyVelocity", game.Players.LocalPlayer.Character.HumanoidRootPart)
+        AntiFall.Velocity = Vector3.new(0, 0, 0)
+        NoclipE = game:GetService("RunService").RenderStepped:Connect(Noclip)
+        Tween:Play()
+    end
+
+    Tween.Completed:Connect(function()
+        AntiFall:Destroy()
+        NoclipE:Disconnect()
+    end)
+end
+
+local function GetNearestChest()
+    local Nearest = math.huge
+    local Chest = nil
+    for i, v in pairs(game.Workspace:GetChildren()) do
+        if string.find(v.Name, "Chest") then
+            local Mag = (Player.Character.HumanoidRootPart.Position - v.Hitbox.Position).Magnitude
+            if Mag < Nearest then
+                Nearest = Mag
+                Chest = v
+            end
+        end
+    end
+    return Chest
+end
+
+local Mobs = {}
+local function GetMobs()
+    for i, v in pairs(game.Workspace["NPC Zones"]:GetDescendants()) do
+        if v:IsA("StringValue") and v.Name == "NPCName" then
+            if not table.find(Mobs, v.Value) then
+                table.insert(Mobs, v.Value)
+            end
+        end
+    end
+    return Mobs
+end
+GetMobs()
+
+local function GetNearestMob()
+    local Nearest = math.huge
+    local Mob = nil
+    for i, v in next, game.Workspace["NPC Zones"]:GetDescendants() do
+        if v:IsA("Model") and v.Parent.Name == "NPCS" and v.Humanoid.Health > 0 and v.NPCName.Value == SelectedMob then
+            local Mag = (Player.Character.HumanoidRootPart.Position - v.HumanoidRootPart.Position).Magnitude
+            if Mag < Nearest then
+                Nearest = Mag
+                Mob = v
+            end
+        end
+    end
+    return Mob
+end
+
+local function GetFruit()
+    local Nearest = math.huge
+    local Fruit = nil
+    for i, v in next, game.Workspace:GetChildren() do
+        if v:IsA("Tool") then
+            local Mag = (Player.Character.HumanoidRootPart.Position - v.Handle.Position).Magnitude
+            if Mag < Nearest then
+                Nearest = Mag
+                Fruit = v
+            end
+        end
+    end
+    return Fruit
+end
+
+-- Tabs --
+
+local Main = Window:NewTab("Main")
+local Teleports = Window:NewTab("Teleports")
+local LP = Window:NewTab("Local Player")
+local Misc = Window:NewTab("Misc")
+
+-- Main Section --
+
+local AFarm = Main:NewSection("Auto Farm")
+local AStats = Main:NewSection("Auto Stats")
+local ASkills = Main:NewSection("Auto Skills")
+
+local AutoAttack
+local AFToggle1 = AFarm:NewToggle("Auto Attack", "Bruh you need information for this", function(Value)
+    AutoAttack = Value
+    while wait() do
+        if AutoAttack and (Player.Character or Player.CharacterAdded:Wait()) then
+            pcall(function()
+                game:GetService("Players").LocalPlayer.Character.Combat.Punch:FireServer((1))
+            end)
+        end
+    end
+end)
+
+local AutoFarm
+local AFToggle2 = AFarm:NewToggle("Auto Farm", "Auto Farm Selected Quest", function(Value)
+    AutoFarm = Value
+    while wait() do
+        if AutoFarm and (Player.Character or Player.CharacterAdded:Wait()) then
+            pcall(function()
+                TweenTP(GetNearestMob().HumanoidRootPart)
+                local Tool = Player.Backpack:FindFirstChild(SelectedWeapon) or Player.Character:FindFirstChild(SelectedWeapon)
+
+                if Tool then
+                    Tool.Parent = Player.Character
+                end
+
+                if Player.Quest.NPCName.Value == "" then
+                    if SelectedMob == "Thief" then
+                        TweenTP(game.Workspace.Npc_Workspace.QuestGivers["1"].Clicker)
+                        local NPC = workspace.Npc_Workspace.QuestGivers:FindFirstChild("1"):FindFirstChild("1")
+                        local Level = "Level 1"
+                        game:GetService("Players").LocalPlayer.PlayerGui.QuestGui.QuestFunction:InvokeServer(NPC, Level)
+                    elseif SelectedMob == "Bandit" then
+                        TweenTP(game.Workspace.Npc_Workspace.QuestGivers["1"].Clicker)
+                        local NPC = workspace.Npc_Workspace.QuestGivers:FindFirstChild("1"):FindFirstChild("1")
+                        local Level = "Level 10"
+                        game:GetService("Players").LocalPlayer.PlayerGui.QuestGui.QuestFunction:InvokeServer(NPC, Level)
+                    elseif SelectedMob == "Bandit Boss" then
+                        TweenTP(game.Workspace.Npc_Workspace.QuestGivers["1"].Clicker)
+                        local NPC = workspace.Npc_Workspace.QuestGivers:FindFirstChild("1"):FindFirstChild("1")
+                        local Level = "Level 25"
+                        game:GetService("Players").LocalPlayer.PlayerGui.QuestGui.QuestFunction:InvokeServer(NPC, Level)
+                    elseif SelectedMob == "Pirate Clown" then
+                        TweenTP(game.Workspace.Npc_Workspace.QuestGivers["2"].Clicker)
+                        local NPC = workspace.Npc_Workspace.QuestGivers:FindFirstChild("2"):FindFirstChild("2")
+                        local Level = "Level 40"
+                        game:GetService("Players").LocalPlayer.PlayerGui.QuestGui.QuestFunction:InvokeServer(NPC, Level)
+                    elseif SelectedMob == "Clown Boss" then
+                        TweenTP(game.Workspace.Npc_Workspace.QuestGivers["2"].Clicker)
+                        local NPC = workspace.Npc_Workspace.QuestGivers:FindFirstChild("2"):FindFirstChild("2")
+                        local Level = "Level 60"
+                        game:GetService("Players").LocalPlayer.PlayerGui.QuestGui.QuestFunction:InvokeServer(NPC, Level)
+                    elseif SelectedMob == "Fishman" then
+                        TweenTP(game.Workspace.Npc_Workspace.QuestGivers["3"].Clicker)
+                        local NPC = workspace.Npc_Workspace.QuestGivers:FindFirstChild("3"):FindFirstChild("3")
+                        local Level = "Level 90"
+                        game:GetService("Players").LocalPlayer.PlayerGui.QuestGui.QuestFunction:InvokeServer(NPC, Level)
+                    elseif SelectedMob == "Shark Boss" then
+                        TweenTP(game.Workspace.Npc_Workspace.QuestGivers["3"].Clicker)
+                        local NPC = workspace.Npc_Workspace.QuestGivers:FindFirstChild("3"):FindFirstChild("3")
+                        local Level = "Level 120"
+                        game:GetService("Players").LocalPlayer.PlayerGui.QuestGui.QuestFunction:InvokeServer(NPC, Level)
+                    elseif SelectedMob == "Desert Thief" then
+                        TweenTP(game.Workspace.Npc_Workspace.QuestGivers["4"].Clicker)
+                        local NPC = workspace.Npc_Workspace.QuestGivers:FindFirstChild("4"):FindFirstChild("4")
+                        local Level = "Level 160"
+                        game:GetService("Players").LocalPlayer.PlayerGui.QuestGui.QuestFunction:InvokeServer(NPC, Level)
+                    elseif SelectedMob == "Bomb Boss" then
+                        TweenTP(game.Workspace.Npc_Workspace.QuestGivers["4"].Clicker)
+                        local NPC = workspace.Npc_Workspace.QuestGivers:FindFirstChild("4"):FindFirstChild("4")
+                        local Level = "Level 200"
+                        game:GetService("Players").LocalPlayer.PlayerGui.QuestGui.QuestFunction:InvokeServer(NPC, Level)
+                    elseif SelectedMob == "Krieg Pirate" then
+                        TweenTP(game.Workspace.Npc_Workspace.QuestGivers["5"].Clicker)
+                        local NPC = workspace.Npc_Workspace.QuestGivers:FindFirstChild("5"):FindFirstChild("5")
+                        local Level = "Level 250"
+                        game:GetService("Players").LocalPlayer.PlayerGui.QuestGui.QuestFunction:InvokeServer(NPC, Level)
+                    elseif SelectedMob == "Krieg Boss" then
+                        TweenTP(game.Workspace.Npc_Workspace.QuestGivers["5"].Clicker)
+                        local NPC = workspace.Npc_Workspace.QuestGivers:FindFirstChild("5"):FindFirstChild("5")
+                        local Level = "Level 300"
+                        game:GetService("Players").LocalPlayer.PlayerGui.QuestGui.QuestFunction:InvokeServer(NPC, Level)
+                    elseif SelectedMob == "Marine Recruit" then
+                        TweenTP(game.Workspace.Npc_Workspace.QuestGivers["6"].Clicker)
+                        local NPC = workspace.Npc_Workspace.QuestGivers:FindFirstChild("6"):FindFirstChild("6")
+                        local Level = "Level 350"
+                        game:GetService("Players").LocalPlayer.PlayerGui.QuestGui.QuestFunction:InvokeServer(NPC, Level)
+                    elseif SelectedMob == "Tashii" then
+                        TweenTP(game.Workspace.Npc_Workspace.QuestGivers["6"].Clicker)
+                        local NPC = workspace.Npc_Workspace.QuestGivers:FindFirstChild("6"):FindFirstChild("6")
+                        local Level = "Level 400"
+                        game:GetService("Players").LocalPlayer.PlayerGui.QuestGui.QuestFunction:InvokeServer(NPC, Level)
+                    elseif SelectedMob == "Monkey" then
+                        TweenTP(game.Workspace.Npc_Workspace.QuestGivers["7"].Clicker)
+                        local NPC = workspace.Npc_Workspace.QuestGivers:FindFirstChild("7"):FindFirstChild("7")
+                        local Level = "Level 450"
+                        game:GetService("Players").LocalPlayer.PlayerGui.QuestGui.QuestFunction:InvokeServer(NPC, Level)
+                    elseif SelectedMob == "Gorilla" then
+                        TweenTP(game.Workspace.Npc_Workspace.QuestGivers["7"].Clicker)
+                        local NPC = workspace.Npc_Workspace.QuestGivers:FindFirstChild("7"):FindFirstChild("7")
+                        local Level = "Level 500"
+                        game:GetService("Players").LocalPlayer.PlayerGui.QuestGui.QuestFunction:InvokeServer(NPC, Level)
+                    elseif SelectedMob == "Gorilla King" then
+                        TweenTP(game.Workspace.Npc_Workspace.QuestGivers["7"].Clicker)
+                        local NPC = workspace.Npc_Workspace.QuestGivers:FindFirstChild("7"):FindFirstChild("7")
+                        local Level = "Level 550"
+                        game:GetService("Players").LocalPlayer.PlayerGui.QuestGui.QuestFunction:InvokeServer(NPC, Level)
+                    elseif SelectedMob == "Marine Grunt" then
+                        TweenTP(game.Workspace.Npc_Workspace.QuestGivers["8"].Clicker)
+                        local NPC = workspace.Npc_Workspace.QuestGivers:FindFirstChild("8"):FindFirstChild("8")
+                        local Level = "Level 600"
+                        game:GetService("Players").LocalPlayer.PlayerGui.QuestGui.QuestFunction:InvokeServer(NPC, Level)
+                    elseif SelectedMob == "Marine Captain" then
+                        TweenTP(game.Workspace.Npc_Workspace.QuestGivers["8"].Clicker)
+                        local NPC = workspace.Npc_Workspace.QuestGivers:FindFirstChild("8"):FindFirstChild("8")
+                        local Level = "Level 650"
+                        game:GetService("Players").LocalPlayer.PlayerGui.QuestGui.QuestFunction:InvokeServer(NPC, Level)
+                    elseif SelectedMob == "Satyr" then
+                        TweenTP(game.Workspace.Npc_Workspace.QuestGivers["9"].Clicker)
+                        local NPC = workspace.Npc_Workspace.QuestGivers:FindFirstChild("9"):FindFirstChild("9")
+                        local Level = "Level 700"
+                        game:GetService("Players").LocalPlayer.PlayerGui.QuestGui.QuestFunction:InvokeServer(NPC, Level)
+                    elseif SelectedMob == "Minotaur" then
+                        TweenTP(game.Workspace.Npc_Workspace.QuestGivers["9"].Clicker)
+                        local NPC = workspace.Npc_Workspace.QuestGivers:FindFirstChild("9"):FindFirstChild("9")
+                        local Level = "Level 750"
+                        game:GetService("Players").LocalPlayer.PlayerGui.QuestGui.QuestFunction:InvokeServer(NPC, Level)
+                    elseif SelectedMob == "Elite Marine" then
+                        TweenTP(game.Workspace.Npc_Workspace.QuestGivers["10"].Clicker)
+                        local NPC = workspace.Npc_Workspace.QuestGivers:FindFirstChild("10"):FindFirstChild("10")
+                        local Level = "Level 800"
+                        game:GetService("Players").LocalPlayer.PlayerGui.QuestGui.QuestFunction:InvokeServer(NPC, Level)
+                    elseif SelectedMob == "Vice Admiral" then
+                        TweenTP(game.Workspace.Npc_Workspace.QuestGivers["10"].Clicker)
+                        local NPC = workspace.Npc_Workspace.QuestGivers:FindFirstChild("10"):FindFirstChild("10")
+                        local Level = "Level 850"
+                        game:GetService("Players").LocalPlayer.PlayerGui.QuestGui.QuestFunction:InvokeServer(NPC, Level)
+                    elseif SelectedMob == "Ice Admiral" then
+                        TweenTP(game.Workspace.Npc_Workspace.QuestGivers["10"].Clicker)
+                        local NPC = workspace.Npc_Workspace.QuestGivers:FindFirstChild("10"):FindFirstChild("10")
+                        local Level = "Level 900"
+                        game:GetService("Players").LocalPlayer.PlayerGui.QuestGui.QuestFunction:InvokeServer(NPC, Level)
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+local AFDropdown2 = AFarm:NewDropdown("Select Mob", "Select Mob for Auto Farm", Mobs, function(Option)
+    SelectedMob = Option
+end)
+
+local AFDropdown3 = AFarm:NewDropdown("Select Weapon", "Select Weapon to use for Auto Farm", {"Combat"}, function(Option)
+    SelectedWeapon = Option
+end)
+
+local AFButton1 = AFarm:NewButton("Refresh Mobs", "Refresh mobs in render distance", function()
+    table.clear(Mobs)
+    AFDropdown2:Refresh(GetMobs())
+end)
+
+local AFButton2 = AFarm:NewButton("Refresh Weapons", "Refresh Weapons Info", function()
+    AFDropdown3:Refresh(GetWeapons())
+end)
+
+local AutoFarmChest
+local AFToggle2 = AFarm:NewToggle("Auto Farm Chest", "Auto Farm all Chest", function(Value)
+    AutoFarmChest = Value
+    while wait() do
+        if AutoFarmChest and (Player.Character or Player.CharacterAdded:Wait()) then
+            pcall(function()
+                local Chest = GetNearestChest()
+                if Chest ~= nil then
+                    TweenTP(Chest.Hitbox)
+                end
+            end)
+        end
+    end
+end)
+
+local AutoStatsCombat
+local ASToggle1 = AStats:NewToggle("Combat", "Auto Combat Stats", function(Value)
+    AutoStatsCombat = Value
+    while AutoStatsCombat do
+        wait()
+        local String1 = "Combat"
+        local Number2 = 1
+        game:GetService("ReplicatedStorage").Replication.ClientEvents.Stats_Event:FireServer(String1, Number2)
+    end
+end)
+
+local AutoStatsDefense
+local ASToggle2 = AStats:NewToggle("Defense", "Auto Defense Stats", function(Value)
+    AutoStatsDefense = Value
+    while AutoStatsDefense do
+        wait()
+        local String1 = "Defense"
+        local Number2 = 1
+        game:GetService("ReplicatedStorage").Replication.ClientEvents.Stats_Event:FireServer(String1, Number2)
+    end
+end)
+
+local AutoStatsSword
+local ASToggle3 = AStats:NewToggle("Sword", "Auto Sword Stats", function(Value)
+    AutoStatsSword = Value
+    while AutoStatsSword do
+        wait()
+        local String1 = "Sword"
+        local Number2 = 1
+        game:GetService("ReplicatedStorage").Replication.ClientEvents.Stats_Event:FireServer(String1, Number2)
+    end
+end)
+
+local AutoStatsFruit
+local ASToggle4 = AStats:NewToggle("Fruit", "Auto Fruit Stats", function(Value)
+    AutoStatsFruit = Value
+    while AutoStatsFruit do
+        wait()
+        local String1 = "Fruit"
+        local Number2 = 1
+        game:GetService("ReplicatedStorage").Replication.ClientEvents.Stats_Event:FireServer(String1, Number2)
+    end
+end)
+
+local AutoSkill
+local ASKToggle1 = ASkills:NewToggle("Auto Skills", "Auto use skills", function(Value)
+    AutoSkill = Value
+    while wait() do
+        if AutoSkill and AutoFarm and (Player.Character or Player.CharacterAdded:Wait()) then
+            pcall(function()
+                if SelectedWeapon == "Combat" then
+                    if ZSkill and (Player.Character.HumanoidRootPart.Position - GetNearestMob().HumanoidRootPart.Position).Magnitude < 50 then
+                        local Num = 1
+                        local CFrame1 = GetNearestMob().HumanoidRootPart.CFrame
+                        Player.Character.Combat.Events.DetriotSmash:FireServer(Num, CFrame1)
+                    end
+                    if XSkill and (Player.Character.HumanoidRootPart.Position - GetNearestMob().HumanoidRootPart.Position).Magnitude < 50 then
+                        Player.Character.Combat.Events.GroundSmash:FireServer()
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+local ASKToggle2 = ASkills:NewToggle("Z Skill", "", function(Value)
+    ZSkill = Value
+end)
+
+local ASKToggle3 = ASkills:NewToggle("X Skill", "", function(Value)
+    XSkill = Value
+end)
+
+-- Teleports Section --
+
+local TPs = Teleports:NewSection("Teleport")
+
+local TPToFruit
+local TPToggle1 = TPs:NewToggle("Teleport to Spawned Fruit", "...", function(Value)
+    TPToFruit = Value
+    while wait() do
+        if TPToFruit and (Player.Character or Player.CharacterAdded:Wait()) then
+            pcall(function()
+                TweenTP(GetFruit().Handle)
+                for i, v in pairs(game.Workspace:GetDescendants()) do
+                    if v:IsA("Part") or v:IsA("MeshPart") then
+                        if Player:DistanceFromCharacter(v.Position) <= 50 then
+                            if v:FindFirstChild("ProximityPrompt") then
+                                fireproximityprompt(v.ProximityPrompt)
+                            end
+                        end
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+local SelectedIsland
+local TPDropdown1 = TPs:NewDropdown("Select Island", "", Islands, function(Option)
+    SelectedIsland = Option
+end)
+
+local SelectedNPC
+local TPDropdown2 = TPs:NewDropdown("Select NPC", "", {"Buso", "ObsHaki", "Flashstep 1", "Flashstep2", "Black Leg", "Stat Reset", "Fruit Remover"}, function(Option)
+    SelectedNPC = Option
+end)
+
+local TPButton1 = TPs:NewButton("Teleport to Selected Island", "", function()
+    game.ReplicatedStorage.Replication.ClientEvents.SetSpawnPoint:FireServer(SelectedIsland)
+    Player.Character.Humanoid.Health = 0
+end)
+
+local TPButton2 = TPs:NewButton("Teleport to Selected NPC", "", function()
+    if SelectedNPC == "Buso" then
+        TweenTP(game.Workspace.Npc_Workspace.Buso["1"].Clicker)
+    elseif SelectedNPC == "ObsHaki" then
+        TweenTP(game.Workspace.Npc_Workspace.ObsHaki["1"].Clicker)
+    elseif SelectedNPC == "Flashstep 1" then
+        TweenTP(game.Workspace.Npc_Workspace.FlashStep["1"].Clicker)
+    elseif SelectedNPC == "Flashstep 2" then
+        TweenTP(game.Workspace.Npc_Workspace.FlashStep["2"].Clicker)
+    elseif SelectedNPC == "Black Leg" then
+        TweenTP(game.Workspace.Npc_Workspace.Geppo["Black Leg"].Clicker)
+    elseif SelectedNPC == "Stat Reset" then
+        TweenTP(game.Workspace.Npc_Workspace.StatRemove.StatReset.Clicker)
+    elseif SelectedNPC == "Fruit Remover" then
+        TweenTP(game.Workspace.Npc_Workspace.FruitRemovers["Doctor White"].Clicker)
+    end
+end)
+
+-- Local Player Section --
+
+local LPs = LP:NewSection("Local Player")
+local ESP = LP:NewSection("ESP")
+
+local EnJumppower
+local LPsToggle1 = LPs:NewToggle("Enable Jump Power", "", function(Value)
+    EnJumppower = Value
+end)
+
+local LPsSlider1 = LPs:NewSlider("Jump power", "", 400, 75, function(Value)
+    PlrJump = Value
+end)
+
+local PlrESP
+local ESPToggle1 = ESP:NewToggle("ESP", "", function(Value)
+    PlrESP = Value
+    game:GetService("RunService").RenderStepped:Connect(function()
+        if PlrESP then
+            pcall(function()
+                for i, v in pairs(game.Players:GetPlayers()) do
+                    if v.Character and v.Name ~= Player.Name then
+                        if not v.Character.Head:FindFirstChild("PlayerESP") then
+                            local BGui = Instance.new("BillboardGui", v.Character.Head)
+                            BGui.Name = "PlayerESP"
+                            BGui.Size = UDim2.new(0, 175, 0, 30)
+                            BGui.Adornee = v.Character.Head
+                            BGui.AlwaysOnTop = true
+
+                            local Nama = Instance.new("TextLabel", BGui)
+                            Nama.Name = "Nama"
+                            Nama.Text = (v.Name .. " (" .. Round((game.Players.LocalPlayer.Character.Head.Position - v.Character.Head.Position).Magnitude/3) .. "m)")
+                            Nama.TextScaled = true
+                            Nama.Size = UDim2.new(1, 0, 0.33, 0)
+                            Nama.Position = UDim2.new(0, 0, 0, 0)
+                            Nama.TextYAlignment = "Top"
+                            Nama.TextColor3 = Color3.fromRGB(255, 180, 0)
+                            Nama.BackgroundTransparency = 1
+                            Nama.Font = Enum.Font.GothamBold
+                            Nama.TextStrokeTransparency = 0.5
+
+                            local Health = Instance.new("TextLabel", BGui)
+                            Health.Name = "Health"
+                            Health.Text = "Health: " .. Round(v.Character.Humanoid.Health) .. "/" .. Round(v.Character.Humanoid.MaxHealth)
+                            Health.TextScaled = true
+                            Health.Size = UDim2.new(1, 0, 0.33, 0)
+                            Health.Position = UDim2.new(0, 0, 0.34, 0)
+                            Health.TextYAlignment = "Top"
+                            Health.TextColor3 = Color3.fromRGB(255, 180, 0)
+                            Health.BackgroundTransparency = 1
+                            Health.Font = Enum.Font.GothamBold
+                            Health.TextStrokeTransparency = 0.5
+                        else
+                            v.Character.Head.PlayerESP.Nama.Text = (v.Name .. " (" .. Round((game.Players.LocalPlayer.Character.Head.Position - v.Character.Head.Position).Magnitude/3) .. "m)")
+                            v.Character.Head.PlayerESP.Health.Text = "Health: " .. Round(v.Character.Humanoid.Health) .. "/" .. Round(v.Character.Humanoid.MaxHealth)
+                        end
+                    end
+                end
+            end)
+        else
+            for i, v in pairs(game.Players:GetPlayers()) do
+                if v.Character and v.Name ~= Player.Name then
+                    if v.Character.Head:FindFirstChild("PlayerESP") then
+                        v.Character.Head:FindFirstChild("PlayerESP"):Destroy()
+                    end
+                end
+            end
+        end
+    end)
+end)
+
+-- Misc Section --
+
+local MSec = Misc:NewSection("Misc")
+
+local MButton1 = MSec:NewButton("Hop to Low Player Server", "", function()
+    local rejoinPreferred = loadstring(game:HttpGetAsync("https://raw.githubusercontent.com/Kozenomenon/RBX_Pub/main/Misc/Rejoin_Preferred_Server.lua"))
+    rejoinPreferred({
+        SizeSort = "asc",
+        MinPlayers = 1,
+        MaxPlayers = 0,
+        ExcludeFull = true,
+        ExcludeSame = true,
+        MinFps = 30,
+        MaxPing = 190,
+        
+        FpsSortWeight = 1,
+        PingSortWeight = 1,
+        SizeSortWeight = 5, 
+        
+        PrintVerbose = false,
+        PrintPrefixTime = false,
+        PrintUseConsoleWindow = false
+    })
+end)
+
+local MButton2 = MSec:NewButton("Copy Discord Link", "", function()
+    setclipboard("https://discord.gg/pdsSGSsUj2")
+end)
+
+local MKeybind1 = MSec:NewKeybind("Toggle UI", "", Enum.KeyCode.LeftAlt, function()
+    Library:ToggleUI()
+end)
+
+local MSlider1 = MSec:NewSlider("Tween Speed", "", 1000, 100, function(Value)
+    TweenSpeed = Value
+end)
+
+-- Running Scripts Here --
+
+game:GetService("RunService").RenderStepped:Connect(function()
+    if EnJumppower and (Player.Character or Player.CharacterAdded:Wait()) then
+        Player.Character.Humanoid.JumpPower = PlrJump
+    end
+end)
+
+
+
