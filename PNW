@@ -631,7 +631,7 @@ local MButton2 = MSec:NewButton("Hop to High Player Server", "", function()
     rejoinPreferred({
         SizeSort = "desc",
         MinPlayers = 1,
-        MaxPlayers = 0,
+        MaxPlayers = 8,
         ExcludeFull = true,
         ExcludeSame = true,
         MinFps = 30,
